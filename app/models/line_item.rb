@@ -39,11 +39,11 @@ class LineItem < ApplicationRecord
     (quantity * 4.50).round(2)
   end
 
-  # Bulk discount for coffee: 2/3 price (7.49) when 3+ items
+  # Bulk discount for coffee: 2/3 price when 3+ items
   # @return [Float] the discounted subtotal
   def bulk_discount_coffee
     return subtotal unless quantity >= 3
 
-    (quantity * 7.49).round(2)
+    (subtotal * (2.0 / 3.0)).round(2)
   end
 end
