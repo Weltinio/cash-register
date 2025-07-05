@@ -24,7 +24,7 @@ RSpec.describe 'Cart Discount Logic', type: :model do
       cart = Cart.create!
       line_item = LineItem.create!(cart: cart, product: coffee, quantity: 3)
 
-      expected = (7.49 * 3).round(2)
+      expected = (coffee.price * (2.0 / 3.0) * 3).round(2)
       expect(line_item.discounted_subtotal).to eq(expected)
     end
 
@@ -64,7 +64,7 @@ RSpec.describe 'Cart Discount Logic', type: :model do
 
       expect(gr1_item.discounted_subtotal).to eq(3.11) # BOGO
       expect(sr1_item.discounted_subtotal).to eq(13.50) # Bulk discount
-      expect(cf1_item.discounted_subtotal).to eq(22.47) # 3 * 7.49
+      expect(cf1_item.discounted_subtotal).to eq(22.46) # Bulk discount
     end
   end
 end
