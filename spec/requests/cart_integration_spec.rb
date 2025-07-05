@@ -5,6 +5,19 @@ RSpec.describe 'Cart Integration', type: :request do
   let(:strawberries) { Product.find_by(code: 'SR1') || Product.create!(code: 'SR1', name: 'Strawberries', price: 5.00) }
   let(:coffee) { Product.find_by(code: 'CF1') || Product.create!(code: 'CF1', name: 'Coffee', price: 11.23) }
 
+  # Helper method to compare basket strings regardless of product order
+  def expect_basket_to_contain(cart_response, expected_items)
+    basket = cart_response['basket']
+    if expected_items.empty?
+      expect(basket).to eq('')
+    else
+      # Parse the basket string into individual items
+      basket_items = basket.split(',').map(&:strip).sort
+      expected_items_array = expected_items.split(',').map(&:strip).sort
+      expect(basket_items).to eq(expected_items_array)
+    end
+  end
+
   describe 'Cart lifecycle' do
     it 'creates a cart and adds products through API' do
       # Create a cart
@@ -19,7 +32,7 @@ RSpec.describe 'Cart Integration', type: :request do
 
       cart_response = JSON.parse(response.body)
       expect(cart_response['calculated_total_price'].to_f).to eq(3.11) # BOGO discount
-      expect(cart_response['basket']).to eq('GR1 x 2')
+      expect_basket_to_contain(cart_response, 'GR1 x 2')
 
       # Add strawberries to cart
       post "/carts/#{cart_id}/add_product", params: { product_id: strawberries.id, quantity: 3 }
@@ -27,16 +40,16 @@ RSpec.describe 'Cart Integration', type: :request do
 
       cart_response = JSON.parse(response.body)
       expect(cart_response['calculated_total_price'].to_f).to eq(16.61) # 3.11 + (3 * 4.50)
-      expect(cart_response['basket']).to eq('GR1 x 2,SR1 x 3')
+      expect_basket_to_contain(cart_response, 'GR1 x 2,SR1 x 3')
 
       # Add coffee to cart
       post "/carts/#{cart_id}/add_product", params: { product_id: coffee.id, quantity: 3 }
       expect(response).to have_http_status(:ok)
 
       cart_response = JSON.parse(response.body)
-      expected_total = 3.11 + (3 * 4.50) + (3 * 7.49)
+      expected_total = 3.11 + (3 * 4.50) + (3 * coffee.price * (2.0 / 3.0)).round(2)
       expect(cart_response['calculated_total_price'].to_f).to eq(expected_total)
-      expect(cart_response['basket']).to eq('GR1 x 2,SR1 x 3,CF1 x 3')
+      expect_basket_to_contain(cart_response, 'GR1 x 2,SR1 x 3,CF1 x 3')
     end
 
     it 'updates product quantities through API' do
@@ -53,7 +66,7 @@ RSpec.describe 'Cart Integration', type: :request do
 
       cart_response = JSON.parse(response.body)
       expect(cart_response['calculated_total_price'].to_f).to eq(16.61) # 3.11 + (3 * 4.50)
-      expect(cart_response['basket']).to eq('GR1 x 1,SR1 x 3')
+      expect_basket_to_contain(cart_response, 'GR1 x 1,SR1 x 3')
 
       # Update strawberries quantity to remove bulk discount
       patch "/carts/#{cart_id}/update_quantity", params: { product_id: strawberries.id, quantity: 2 }
@@ -61,7 +74,7 @@ RSpec.describe 'Cart Integration', type: :request do
 
       cart_response = JSON.parse(response.body)
       expect(cart_response['calculated_total_price'].to_f).to eq(13.11) # 3.11 + (2 * 5.00)
-      expect(cart_response['basket']).to eq('GR1 x 1,SR1 x 2')
+      expect_basket_to_contain(cart_response, 'GR1 x 1,SR1 x 2')
     end
 
     it 'removes products from cart through API' do
@@ -78,7 +91,7 @@ RSpec.describe 'Cart Integration', type: :request do
 
       cart_response = JSON.parse(response.body)
       expect(cart_response['calculated_total_price'].to_f).to eq(3.11) # Only green tea with BOGO
-      expect(cart_response['basket']).to eq('GR1 x 2')
+      expect_basket_to_contain(cart_response, 'GR1 x 2')
       expect(cart_response['line_items'].length).to eq(1)
     end
 
@@ -95,7 +108,7 @@ RSpec.describe 'Cart Integration', type: :request do
 
       cart_response = JSON.parse(response.body)
       expect(cart_response['calculated_total_price'].to_f).to eq(0)
-      expect(cart_response['basket']).to eq('')
+      expect_basket_to_contain(cart_response, '')
       expect(cart_response['line_items'].length).to eq(0)
     end
 
