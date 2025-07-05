@@ -1,24 +1,47 @@
-# README
+# Cash Register
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+A Ruby on Rails cash register application with special pricing rules and a React UI for live testing.
 
-Things you may want to cover:
+**Live Demo: [Cash Register](https://cash-register-gp9f.onrender.com)**
 
-* Ruby version
+## Features
 
-* System dependencies
+- **Special Pricing Rules**:
+  - Green Tea (GR1): Buy one get one free
+  - Strawberries (SR1): €4.50 each when buying 3 or more
+  - Coffee (CF1): 2/3 price when buying 3 or more
+- **RESTful API** for cart management
+- **React UI** for live testing and demonstration
+- **Comprehensive test suite** with unit and integration tests
 
-* Configuration
+## Project Setup
 
-* Database creation
+### Prerequisites
 
-* Database initialization
+- Ruby 3.3.0
+- Rails 8.0
+- PostgreSQL 16 database
+- Node.js (for React development, optional)
 
-* How to run the test suite
+## API Endpoints
 
-* Services (job queues, cache servers, search engines, etc.)
+### Products
+- `GET /products` - List all products
 
-* Deployment instructions
+### Carts
+- `POST /carts` - Create a new cart
+- `GET /carts/:id` - Get cart details
+- `DELETE /carts/:id` - Delete a cart
 
-* ...
+### Cart Products
+- `POST /carts/:id/add_product` - Add product to cart
+- `PATCH /carts/:id/update_quantity` - Update product quantity
+- `DELETE /carts/:id/remove_product` - Remove product from cart
+
+## Discount Logic
+
+The application implements special pricing rules using a strategy pattern:
+
+- **Green Tea (GR1)**: Buy one get one free
+- **Strawberries (SR1)**: €4.50 each when buying 3+ items
+- **Coffee (CF1)**: 2/3 price (€4.50) when buying 3+ items
