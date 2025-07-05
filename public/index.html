@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cash Register</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        .error { color: red; }
+        .loading { color: gray; }
+        button { margin: 2px; padding: 4px 8px; }
+        .cart-item { margin: 5px 0; padding: 5px; border: 1px solid #ccc; }
+        .total { font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+
+        function CashRegister() {
+            const [products, setProducts] = useState([]);
+            const [cart, setCart] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                console.log('useEffect running...');
+                fetchProducts();
+                createCart();
+            }, []);
+
+            const fetchProducts = async () => {
+                try {
+                    console.log('Fetching products...');
+                    const response = await fetch('/products');
+                    const data = await response.json();
+                    console.log('Products fetched:', data);
+                    setProducts(data);
+                } catch (err) {
+                    console.error('Error fetching products:', err);
+                    setError('Failed to fetch products');
+                }
+            };
+
+            const createCart = async () => {
+                try {
+                    console.log('Creating cart...');
+                    const response = await fetch('/carts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    console.log('Cart response status:', response.status);
+                    const data = await response.json();
+                    console.log('Cart created:', data);
+                    setCart(data);
+                    setLoading(false);
+                } catch (err) {
+                    console.error('Error creating cart:', err);
+                    setError('Failed to create cart');
+                    setLoading(false);
+                }
+            };
+
+            const addToCart = async (productId, quantity = 1) => {
+                if (!cart || !cart.id) {
+                    console.error('Cart not initialized:', cart);
+                    setError('Cart not initialized. Please refresh the page.');
+                    return;
+                }
+                
+                try {
+                    console.log('Adding to cart:', { cartId: cart.id, productId, quantity });
+                    const response = await fetch(`/carts/${cart.id}/add_product`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ product_id: productId, quantity })
+                    });
+                    const data = await response.json();
+                    setCart(data);
+                } catch (err) {
+                    console.error('Error adding to cart:', err);
+                    setError('Failed to add product to cart');
+                }
+            };
+
+            const updateQuantity = async (productId, quantity) => {
+                try {
+                    const response = await fetch(`/carts/${cart.id}/update_quantity`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ product_id: productId, quantity })
+                    });
+                    const data = await response.json();
+                    setCart(data);
+                } catch (err) {
+                    setError('Failed to update quantity');
+                }
+            };
+
+            const removeFromCart = async (productId) => {
+                try {
+                    const response = await fetch(`/carts/${cart.id}/remove_product`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ product_id: productId })
+                    });
+                    const data = await response.json();
+                    setCart(data);
+                } catch (err) {
+                    setError('Failed to remove product from cart');
+                }
+            };
+
+            const getProductById = (productId) => {
+                return products.find(p => p.id === productId);
+            };
+
+            if (loading) {
+                return <div className="loading">Loading...</div>;
+            }
+
+            return (
+                <div>
+                    <h1>Cash Register</h1>
+                    
+                    {error && (
+                        <div className="error">
+                            {error}
+                            <button onClick={() => setError(null)}>✕</button>
+                        </div>
+                    )}
+
+                    <div>
+                        <h2>Products</h2>
+                        {products.map(product => (
+                            <div key={product.id}>
+                                {product.name} ({product.code}) - €{product.price}
+                                <button onClick={() => addToCart(product.id, 1)}>Add</button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div>
+                        <h2>Cart</h2>
+                        {cart && cart.line_items && cart.line_items.length > 0 ? (
+                            <>
+                                {cart.line_items.map(item => {
+                                    const product = getProductById(item.product_id);
+                                    return (
+                                        <div key={item.id} className="cart-item">
+                                            <div>
+                                                {product?.name || 'Unknown'} x {item.quantity}
+                                                <br />
+                                                €{item.discounted_subtotal} {item.discounted_subtotal !== item.subtotal && '(discounted)'}
+                                            </div>
+                                            <div>
+                                                <button onClick={() => updateQuantity(item.product_id, item.quantity - 1)} disabled={item.quantity <= 1}>-</button>
+                                                <button onClick={() => updateQuantity(item.product_id, item.quantity + 1)}>+</button>
+                                                <button onClick={() => removeFromCart(item.product_id)}>Remove</button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div className="total">
+                                    Total: €{cart.calculated_total_price}
+                                    <br />
+                                    Basket: {cart.basket}
+                                </div>
+                            </>
+                        ) : (
+                            <p>Cart is empty</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Use the new createRoot API
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<CashRegister />);
+    </script>
+</body>
+</html> 

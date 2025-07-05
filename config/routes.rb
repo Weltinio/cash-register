@@ -1,6 +1,15 @@
 Rails.application.routes.draw do
+  # Root route for the React UI
+  root "application#index"
+
   resources :products
-  resources :carts
+  resources :carts do
+    member do
+      post :add_product
+      delete :remove_product
+      patch :update_quantity
+    end
+  end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
