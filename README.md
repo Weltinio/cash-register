@@ -44,4 +44,4 @@ The application implements special pricing rules using a strategy pattern:
 
 - **Green Tea (GR1)**: Buy one get one free
 - **Strawberries (SR1)**: €4.50 each when buying 3+ items
-- **Coffee (CF1)**: 2/3 price (€4.50) when buying 3+ items
+- **Coffee (CF1)**: 2/3 price when buying 3+ items
